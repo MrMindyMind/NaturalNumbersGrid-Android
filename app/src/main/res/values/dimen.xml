@@ -2,4 +2,9 @@
 <resources>
     <dimen name="cell_size">80dp</dimen>
     <dimen name="cell_border_stroke_width">2dp</dimen>
+    <dimen name="factors_popup_box_horizontal_margins">16dp</dimen>
+    <dimen name="factors_popup_box_vertical_margins">8dp</dimen>
+    <dimen name="spacing">8dp</dimen>
+    <dimen name="factors_title_size">16sp</dimen>
+    <dimen name="factors_text_size">12sp</dimen>
 </resources>

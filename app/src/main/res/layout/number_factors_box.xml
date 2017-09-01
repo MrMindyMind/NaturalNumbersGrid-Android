@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout android:id="@+id/factorsPopupBox"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:paddingLeft="@dimen/factors_popup_box_horizontal_margins"
+    android:paddingRight="@dimen/factors_popup_box_horizontal_margins"
+    android:paddingTop="@dimen/factors_popup_box_vertical_margins"
+    android:paddingBottom="@dimen/factors_popup_box_vertical_margins"
+    android:background="@android:drawable/dialog_holo_light_frame">
+
+    <TextView
+        android:id="@+id/factorsTitleTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/colorPrimary"
+        android:textAppearance="@style/TextAppearance.AppCompat.Menu"
+        android:textSize="@dimen/factors_title_size" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="?attr/colorAccent"/>
+
+    <TextView
+        android:id="@+id/factorsTextView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="@dimen/spacing"
+        android:paddingBottom="@dimen/spacing"
+        android:textSize="@dimen/factors_text_size"
+        android:textAppearance="@style/TextAppearance.AppCompat.Caption"/>
+
+</LinearLayout>

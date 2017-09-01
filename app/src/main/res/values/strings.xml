@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">NaturalNumbersGrid</string>
+    <string name="number_factors_title">Factors (excluding 1 and %1$s) for %2$s:</string>
+    <string name="number_prime_factors">No factors (prime)</string>
+    <string name="number_no_factors">No factors</string>
+    <string name="number_0_factors">N</string>
 </resources>
