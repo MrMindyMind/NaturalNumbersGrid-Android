@@ -1,5 +1,7 @@
 package com.hotmail.maximglukhov.naturalnumbersgrid;
 
+import android.graphics.Point;
+import android.graphics.PointF;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v4.view.GestureDetectorCompat;
@@ -7,11 +9,14 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 
+import java.util.ArrayList;
 import java.util.Set;
 
 public class MainActivity extends AppCompatActivity
@@ -26,6 +31,12 @@ public class MainActivity extends AppCompatActivity
 
     // TEMPORARY
     private static final int ADDITIONAL_ITEMS = 200;
+
+    /*
+     * Popup box for factors displaying.
+     */
+
+    FactorsPopupBox mFactorsPopupBox;
 
     /*
      * RecyclerView for entire grid.
@@ -51,6 +62,12 @@ public class MainActivity extends AppCompatActivity
      * Indicate whether the grid is currently highlighted.
      */
     private boolean mIsHighlighted;
+    /*
+     * Holds reference to all highlighted views.
+     * This is required because some views might no longer be visible when holding & scrolling,
+     * and resulting in their background not updating properly.
+     */
+    private ArrayList<NumberCellTextView> mHighlightedCells;
     /*
      * Holds reference to current common factors (long press on a cell).
      */
@@ -236,6 +253,8 @@ public class MainActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        mHighlightedCells = new ArrayList<>();
+
         // Create gesture detector for natural numbers grid.
         final GestureDetectorCompat numbersGridGestureDetector =
                 new GestureDetectorCompat(MainActivity.this,
@@ -276,6 +295,39 @@ public class MainActivity extends AppCompatActivity
                     toggleHighlightForVisibleItems(true, mSelectedFactors);
                     mIsHighlighted = true;
                 }
+
+                /*
+                 * Code below handles popup box position calculating.
+                 * The goal is displaying the box on top of the cell properly, and centered right above it.
+                 * Handles edge cases where box might be obscured by screen boundaries, and even user's finger.
+                 */
+
+                // Get span count to check if popup box is displayed under user's finger (first row).
+                int spanCount = ((GridLayoutManager) mNumbersGridRecyclerView.
+                        getLayoutManager()).getSpanCount();
+
+                // Get view's location on screen.
+                int[] childLocation = new int[2];
+                layout.getLocationInWindow(childLocation);
+                // Get dimensions for popup box.
+                Point boxDimens = mFactorsPopupBox.getMeasuredDimensions();
+                // Get screen dimensions to avoid obscuring by bezels.
+                DisplayMetrics metrics = new DisplayMetrics();
+                getWindowManager().getDefaultDisplay().getMetrics(metrics);
+                // Initialize popup box location as view's location on screen.
+                PointF location = new PointF(childLocation[0], childLocation[1]);
+                // Check if popup box is below first row, only then place it above (this is the part where user's finger could obscure the box).
+                if (childPos >= spanCount)
+                    location.y = Math.max(location.y - (layout.getHeight() + boxDimens.y), 0);
+                // Update horizontal location to be centered above selected cell, or at least 0.
+                location.x = Math.max(location.x - (boxDimens.x/2.0f) + layout.getWidth() / 2.0f, 0);
+                // Check if popup box will be out of screen bounds and move it to the left.
+                float diff = metrics.widthPixels - (location.x + boxDimens.x);
+                // NOTE: despite using addition, diff is negative. Resulting in box moving to the left.
+                if (diff < 0)
+                    location.x += diff;
+                // Finally, show the box at its proper location on screen.
+                mFactorsPopupBox.show(location, cellData);
             }
 
             @Override
@@ -296,6 +348,12 @@ public class MainActivity extends AppCompatActivity
         mNumbersGridRecyclerView.setAdapter(new NumberCellAdapter(DEFAULT_COLUMN_COUNT));
         mNumbersGridRecyclerView.addOnScrollListener(mRecyclerViewScrollListener);
         mNumbersGridRecyclerView.addOnItemTouchListener(new RecyclerView.OnItemTouchListener() {
+
+            /*
+             * Keep reference of previous y pos for delta y calculation.
+             */
+            private float oldY = -1.0f;
+
             @Override
             public boolean onInterceptTouchEvent(RecyclerView rv, MotionEvent e) {
                 // Check if user has long pressed.
@@ -307,11 +365,46 @@ public class MainActivity extends AppCompatActivity
                         toggleHighlightForVisibleItems(false, null);
                         mSelectedFactors = null;
                         mIsHighlighted = false;
+
+                        // Set old y as -1 to reset delta calculation.
+                        oldY = -1.0f;
                     }
+
+                    mFactorsPopupBox.hide();
                 } else if (e.getAction() == MotionEvent.ACTION_MOVE) {
                     // Highlight new visible cells as user scrolls.
-                    if (mIsHighlighted && (mSelectedFactors != null))
+                    if (mIsHighlighted && (mSelectedFactors != null)) {
                         toggleHighlightForVisibleItems(true, mSelectedFactors);
+
+                        /*
+                         * Code below makes sure popup box stays above selected cell.
+                         */
+
+                        if (oldY < 0) {
+                            // Initialize y (first movement on screen since reset or at all).
+                            oldY = e.getY();
+                        } else {
+                            // Calculate delta so we can move the popup box later.
+                            float dy = e.getY() - oldY;
+                            // Check if the result of moving the box will stay above 0 (visible).
+                            boolean isBelowTop = ((mFactorsPopupBox.getLocation().y + dy) > 0);
+                            // Get the very first visible cell position.
+                            int firstVisible = gridLayoutManager.findFirstCompletelyVisibleItemPosition();
+                            // Check if the result of moving the box will make it no longer above selected cell.
+                            boolean isTopScrollable = (dy < 0 || firstVisible > 0);
+
+                            if (isBelowTop && isTopScrollable) {
+                                // Finally, move the box by delta y.
+                                mFactorsPopupBox.moveY(dy);
+                                // Note: only updating oldY when we make any movement(*). This makes the box move smoothly rather than jumping around.
+                                oldY = e.getY();
+                            }
+
+                            // (*) Update oldY when we can't scroll up, because if user tries to scroll down, popup box should move along.
+                            if (!isTopScrollable)
+                                oldY = e.getY();
+                        }
+                    }
                 }
                 return false;
             }
@@ -322,6 +415,9 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void onRequestDisallowInterceptTouchEvent(boolean disallowIntercept) {}
         });
+
+        mFactorsPopupBox = new FactorsPopupBox(MainActivity.this,
+                (ViewGroup) findViewById(R.id.factorsBoxLayout));
 
         /*
          * Initialize number generator.
@@ -374,29 +470,43 @@ public class MainActivity extends AppCompatActivity
         if (mNumbersGridRecyclerView == null)
             return;
 
-        // Iterate through all visible items.
-        int childCount = mNumbersGridRecyclerView.getChildCount();
-        for (int i = 0; i < childCount; i++) {
-            View child = mNumbersGridRecyclerView.getChildAt(i);
-            if (child == null)
-                continue;
+        if (toggle) {
+            // Iterate through all visible items.
+            int childCount = mNumbersGridRecyclerView.getChildCount();
+            boolean highlight;
+            for (int i = 0; i < childCount; i++) {
+                highlight = false;
+                View child = mNumbersGridRecyclerView.getChildAt(i);
+                if (child == null)
+                    continue;
 
-            // Get cell view and data.
-            NumberCellTextView cellView = child.findViewById(R.id.numberTextView);
-            NumberCell childData = cellView.getCellData();
-            if (toggle) {
+                // Get cell view and data.
+                NumberCellTextView cellView = child
+                        .findViewById(R.id.numberTextView);
+                NumberCell childData = cellView.getCellData();
                 // Check if the number itself is a factor.
                 if (factors.contains(childData.getValue())) {
-                    cellView.highlight(true);
+                    highlight = true;
                 } else {
                     // Check if any of the factors match.
-                    if (Utils.hasCommonFactor(factors, childData.getFactors())) {
-                        cellView.highlight(true);
+                    if (Utils.hasCommonFactor(factors,
+                            childData.getFactors())) {
+                        highlight = true;
                     }
                 }
-            } else {
-                cellView.highlight(false);
+
+                if (highlight) {
+                    cellView.highlight(true);
+                    mHighlightedCells.add(cellView);
+                }
             }
+        } else {
+            // Disable highlight for all cells.
+            for (NumberCellTextView cellTextView : mHighlightedCells) {
+                cellTextView.highlight(false);
+            }
+
+            mHighlightedCells.clear();
         }
     }
 }
