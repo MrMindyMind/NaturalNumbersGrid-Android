@@ -3,4 +3,8 @@
     <color name="colorPrimary">#3F51B5</color>
     <color name="colorPrimaryDark">#303F9F</color>
     <color name="colorAccent">#FF4081</color>
+    <color name="colorCellBorders">@android:color/black</color>
+    <color name="colorCellBackgroundComposite">@android:color/white</color>
+    <color name="colorCellBackgroundPrime">@android:color/holo_red_light</color>
+    <color name="colorCellBackgroundHighlight">@android:color/holo_green_light</color>
 </resources>
