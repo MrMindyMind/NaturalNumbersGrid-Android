@@ -2,11 +2,17 @@ package com.hotmail.maximglukhov.naturalnumbersgrid;
 
 import android.os.Bundle;
 import android.os.Handler;
+import android.support.v4.view.GestureDetectorCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
+import android.view.GestureDetector;
+import android.view.MotionEvent;
+import android.view.View;
+
+import java.util.Set;
 
 public class MainActivity extends AppCompatActivity
         implements NumberCellGeneratorTask.NumberCellGeneratorListener {
@@ -40,6 +46,15 @@ public class MainActivity extends AppCompatActivity
      * Indicates that extra memory was loaded for infinite scroll effect.
      */
     private boolean mIsOverDraft;
+
+    /*
+     * Indicate whether the grid is currently highlighted.
+     */
+    private boolean mIsHighlighted;
+    /*
+     * Holds reference to current common factors (long press on a cell).
+     */
+    private Set<Long> mSelectedFactors;
 
     private RecyclerView.OnScrollListener mRecyclerViewScrollListener =
             new RecyclerView.OnScrollListener() {
@@ -227,14 +242,96 @@ public class MainActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // Create gesture detector for natural numbers grid.
+        final GestureDetectorCompat numbersGridGestureDetector =
+                new GestureDetectorCompat(MainActivity.this,
+                        new GestureDetector.OnGestureListener() {
+
+            @Override
+            public boolean onDown(MotionEvent motionEvent) { return true; }
+
+            @Override
+            public void onShowPress(MotionEvent motionEvent) {}
+
+            @Override
+            public boolean onSingleTapUp(MotionEvent motionEvent) { return true; }
+
+            @Override
+            public boolean onScroll(MotionEvent motionEvent,
+                                    MotionEvent motionEvent1,
+                                    float v, float v1) { return false; }
+
+            @Override
+            public void onLongPress(MotionEvent motionEvent) {
+                Log.d(LOG_TAG, "OnGestureListener :: onLongPress :: e=" + motionEvent);
+                // Find child's root view matching touch coordinates.
+                View layout = mNumbersGridRecyclerView.findChildViewUnder(
+                        motionEvent.getX(), motionEvent.getY());
+                // Find adapter's position for this layout.
+                int childPos = mNumbersGridRecyclerView
+                        .getChildAdapterPosition(layout);
+                // Get cell data for this child.
+                NumberCellAdapter adapter = (NumberCellAdapter)
+                        mNumbersGridRecyclerView.getAdapter();
+                NumberCell cellData = adapter.getData().get(childPos);
+                Log.d(LOG_TAG, "OnGestureListener :: onLongPress :: child=" + cellData + " factors=" + cellData.getFactors());
+
+                // Avoid any operations for primes and 0,1,2,3. No cells should highlight for these values.
+                if (!cellData.isPrime() && (cellData.getValue() > 3)) {
+                    mSelectedFactors = cellData.getFactors();
+                    toggleHighlightForVisibleItems(true, mSelectedFactors);
+                    mIsHighlighted = true;
+                }
+            }
+
+            @Override
+            public boolean onFling(MotionEvent motionEvent,
+                                   MotionEvent motionEvent1,
+                                   float v, float v1) { return false; }
+        });
+
+        /*
+         * Initialize grid RecyclerView.
+         */
         mNumbersGridRecyclerView = (RecyclerView) findViewById(
                 R.id.numbersGridRecyclerView);
-        mNumbersGridRecyclerView.setLayoutManager(new GridLayoutManager(
+        final GridLayoutManager gridLayoutManager = new GridLayoutManager(
                 MainActivity.this, DEFAULT_COLUMN_COUNT,
-                LinearLayoutManager.VERTICAL, false));
+                LinearLayoutManager.VERTICAL, false);
+        mNumbersGridRecyclerView.setLayoutManager(gridLayoutManager);
         mNumbersGridRecyclerView.setAdapter(new NumberCellAdapter(DEFAULT_COLUMN_COUNT));
         mNumbersGridRecyclerView.addOnScrollListener(mRecyclerViewScrollListener);
+        mNumbersGridRecyclerView.addOnItemTouchListener(new RecyclerView.OnItemTouchListener() {
+            @Override
+            public boolean onInterceptTouchEvent(RecyclerView rv, MotionEvent e) {
+                // Check if user has long pressed.
+                numbersGridGestureDetector.onTouchEvent(e);
 
+                if (e.getAction() == MotionEvent.ACTION_UP) {
+                    // Return all cells to original highlight state.
+                    if (mIsHighlighted) {
+                        toggleHighlightForVisibleItems(false, null);
+                        mSelectedFactors = null;
+                        mIsHighlighted = false;
+                    }
+                } else if (e.getAction() == MotionEvent.ACTION_MOVE) {
+                    // Highlight new visible cells as user scrolls.
+                    if (mIsHighlighted && (mSelectedFactors != null))
+                        toggleHighlightForVisibleItems(true, mSelectedFactors);
+                }
+                return false;
+            }
+
+            @Override
+            public void onTouchEvent(RecyclerView rv, MotionEvent e) {}
+
+            @Override
+            public void onRequestDisallowInterceptTouchEvent(boolean disallowIntercept) {}
+        });
+
+        /*
+         * Initialize number generator.
+         */
         mGenerator = new NumberCellGeneratorTask(0, 300, true, this,
                 new Handler(getMainLooper()));
         mGenerator.start();
@@ -274,5 +371,38 @@ public class MainActivity extends AppCompatActivity
                 Log.d(LOG_TAG, "onCellsReady :: run :: success.");
             }
         });
+    }
+
+    /*
+     * Helper methods to highlight all visible items with common factor.
+     */
+    private void toggleHighlightForVisibleItems(boolean toggle, Set<Long> factors) {
+        if (mNumbersGridRecyclerView == null)
+            return;
+
+        // Iterate through all visible items.
+        int childCount = mNumbersGridRecyclerView.getChildCount();
+        for (int i = 0; i < childCount; i++) {
+            View child = mNumbersGridRecyclerView.getChildAt(i);
+            if (child == null)
+                continue;
+
+            // Get cell view and data.
+            NumberCellTextView cellView = child.findViewById(R.id.numberTextView);
+            NumberCell childData = cellView.getCellData();
+            if (toggle) {
+                // Check if the number itself is a factor.
+                if (factors.contains(childData.getValue())) {
+                    cellView.highlight(true);
+                } else {
+                    // Check if any of the factors match.
+                    if (Utils.hasCommonFactor(factors, childData.getFactors())) {
+                        cellView.highlight(true);
+                    }
+                }
+            } else {
+                cellView.highlight(false);
+            }
+        }
     }
 }
