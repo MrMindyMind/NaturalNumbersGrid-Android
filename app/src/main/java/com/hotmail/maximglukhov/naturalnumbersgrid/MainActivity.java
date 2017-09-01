@@ -1,11 +1,14 @@
 package com.hotmail.maximglukhov.naturalnumbersgrid;
 
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Point;
 import android.graphics.PointF;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v4.view.GestureDetectorCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.preference.PreferenceManager;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -33,6 +36,8 @@ public class MainActivity extends AppCompatActivity
 
     // TEMPORARY
     private static final int ADDITIONAL_ITEMS = 200;
+
+    private static final int REQUEST_CODE_ACTIVITY_SETTINGS = 0;
 
     /*
      * Popup box for factors displaying.
@@ -421,6 +426,8 @@ public class MainActivity extends AppCompatActivity
         mFactorsPopupBox = new FactorsPopupBox(MainActivity.this,
                 (ViewGroup) findViewById(R.id.factorsBoxLayout));
 
+        syncPreferences();
+
         /*
          * Initialize number generator.
          */
@@ -475,9 +482,26 @@ public class MainActivity extends AppCompatActivity
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.menuItemSettings:
+                Intent intent = new Intent(MainActivity.this,
+                        SettingsActivity.class);
+                startActivityForResult(intent, REQUEST_CODE_ACTIVITY_SETTINGS);
                 return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        Log.d(LOG_TAG," onActivityResult :: requestCode=" + requestCode + " resultCode=" + resultCode);
+
+        switch (requestCode) {
+            case REQUEST_CODE_ACTIVITY_SETTINGS:
+                if (resultCode == RESULT_OK) {
+                    // Preferences have been updated, apply changes.
+                    syncPreferences();
+                }
+                break;
+        }
     }
 
     /*
@@ -524,6 +548,32 @@ public class MainActivity extends AppCompatActivity
             }
 
             mHighlightedCells.clear();
+        }
+    }
+
+    /*
+     * Helper method to synchronize preferences.
+     */
+    private void syncPreferences() {
+        SharedPreferences preferences = PreferenceManager
+                .getDefaultSharedPreferences(MainActivity.this);
+
+        int spanCount = preferences.getInt(getString(
+                R.string.preference_columns_key),
+                DEFAULT_COLUMN_COUNT);
+
+        GridLayoutManager layoutManager = (GridLayoutManager)
+                mNumbersGridRecyclerView.getLayoutManager();
+
+        // Update span count (columns).
+        if (layoutManager.getSpanCount() != spanCount) {
+            layoutManager.setSpanCount(spanCount);
+            mNumbersGridRecyclerView.post(new Runnable() {
+                @Override
+                public void run() {
+                    mNumbersGridRecyclerView.getAdapter().notifyDataSetChanged();
+                }
+            });
         }
     }
 }
