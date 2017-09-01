@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <PreferenceCategory
+        android:title="@string/preference_category_title_grid_settings"
+        android:key="@string/preference_category_key_grid_settings">
+        <android.support.v7.preference.SeekBarPreference
+            android:title="@string/preference_columns_title"
+            android:key="@string/preference_columns_key"
+            android:defaultValue="@integer/defaultColumns"
+            android:max="@integer/maxColumns"/>
+    </PreferenceCategory>
+</PreferenceScreen>
