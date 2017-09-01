@@ -1,5 +1,8 @@
 package com.hotmail.maximglukhov.naturalnumbersgrid;
 
+import java.util.HashSet;
+import java.util.Set;
+
 public class Utils {
 
     /**
@@ -77,5 +80,50 @@ public class Utils {
         stringBuilder.append(']');
 
         return stringBuilder.toString();
+    }
+
+    /**
+     * <p>Factorizes given number and returns all factors (excluding 1 and n).</p>
+     * @param n number to factor.
+     * @return set containing all factors of given number.
+     */
+    public static Set<Long> factorize(long n) {
+        Set<Long> factors = new HashSet<>();
+
+        long lim = (long) Math.sqrt(n);
+
+        // Skip 1 (and n) as factors.
+        for (long i = 2; i <= lim; i++) {
+            if ((n % i) == 0) {
+                factors.add(i);
+                factors.add(n / i);
+            }
+        }
+
+        return factors;
+    }
+
+    /**
+     * <p>Compares given sets of factors. Checks if at least one common factor is found among the two sets.
+     * <br>Returns true if at least one common factor is found. Returns false if no common factors at all.</p>
+     * @param factors1 first set.
+     * @param factors2 second set.
+     * @return true if at least one common factor is found. Returns false if no common factors at all.
+     */
+    public static boolean hasCommonFactor(Set<Long> factors1, Set<Long> factors2) {
+        if (factors1 == null || factors2 == null)
+            return false;
+
+        for (long factor : factors1) {
+            if (factors2.contains(factor))
+                return true;
+        }
+
+        for (long factor : factors2) {
+            if (factors1.contains(factor))
+                return true;
+        }
+
+        return false;
     }
 }
