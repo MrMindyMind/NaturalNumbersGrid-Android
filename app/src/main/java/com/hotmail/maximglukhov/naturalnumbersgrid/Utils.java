@@ -90,6 +90,9 @@ public class Utils {
     public static Set<Long> factorize(long n) {
         Set<Long> factors = new HashSet<>();
 
+        if (n < 3)
+            return factors;
+
         long lim = (long) Math.sqrt(n);
 
         // Skip 1 (and n) as factors.
