@@ -112,8 +112,7 @@ public class NumberCellAdapter
         int cellsListSize = mNumberCells.size();
 
         // Validate input.
-        if ((startIndex >= cellsListSize) || (amount >= cellsListSize)
-                || ((startIndex + amount) >= cellsListSize))
+        if ((startIndex >= cellsListSize) || (amount >= cellsListSize))
             return;
 
         Log.d(LOG_TAG, "removeCells :: removing from i=" + startIndex + ", amount=" + amount);
@@ -121,7 +120,8 @@ public class NumberCellAdapter
             mNumberCells = mNumberCells.subList(amount, mNumberCells.size());
         } else {
             List<NumberCell> lowerList = mNumberCells.subList(0, startIndex);
-            lowerList.addAll(mNumberCells.subList(startIndex + amount + 1, mNumberCells.size()));
+            if ((startIndex + amount) < cellsListSize)
+                lowerList.addAll(mNumberCells.subList(startIndex + amount + 1, mNumberCells.size()));
             mNumberCells = lowerList;
         }
 
