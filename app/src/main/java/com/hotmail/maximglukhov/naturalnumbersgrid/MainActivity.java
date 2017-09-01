@@ -190,12 +190,6 @@ public class MainActivity extends AppCompatActivity
 
                                 Log.d(LOG_TAG, "onScrolled :: run :: success.");
 
-                                // Check if we are at the top of the current list and trigger additional loading if we are.
-                                if (firstCompletelyVisibleItem <= (itemCount / 2)) {
-                                    Log.d("MainActivity", "onScrolled :: run :: running onScrolled once again.");
-                                    onScrolled(recyclerView, dx, dy);
-                                }
-
                                 // Check if we need to load more on the way up. This is true as long as the first item in data is not 0.
                                 if (lowest > NumberCellGeneratorTask.MIN_NUMBER) {
                                     // Flag as loading.
