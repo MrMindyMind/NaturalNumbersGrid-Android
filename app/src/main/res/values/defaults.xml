@@ -2,4 +2,5 @@
 <resources>
     <integer name="defaultColumns">10</integer>
     <integer name="maxColumns">30</integer>
+    <integer name="minColumns">1</integer>
 </resources>
