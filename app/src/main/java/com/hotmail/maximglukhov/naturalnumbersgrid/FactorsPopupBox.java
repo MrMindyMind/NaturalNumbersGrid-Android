@@ -56,6 +56,15 @@ public class FactorsPopupBox {
     }
 
     /**
+     * <p>Sets popup box location.</p>
+     * @param location location to set.
+     */
+    public void setLocation(PointF location) {
+        mRoot.setX(location.x);
+        mRoot.setY(location.y);
+    }
+
+    /**
      * <p>Moves popup box by delta x.</p>
      * @param dx delta x to move by.
      */
@@ -133,8 +142,7 @@ public class FactorsPopupBox {
         mFactorsTextView.setText(factorsString.toString());
 
         // Set on screen location.
-        mRoot.setX(location.x);
-        mRoot.setY(location.y);
+        setLocation(location);
 
         // Finally, display box.
         mRoot.setVisibility(View.VISIBLE);

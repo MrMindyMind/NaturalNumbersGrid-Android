@@ -330,13 +330,15 @@ public class MainActivity extends AppCompatActivity
                 // Get view's location on screen.
                 int[] childLocation = new int[2];
                 layout.getLocationInWindow(childLocation);
+                // Initialize popup box location as view's location on screen.
+                PointF location = new PointF(childLocation[0], childLocation[1]);
+                // Show popup box early to get accurate measurements.
+                mFactorsPopupBox.show(location, cellData);
                 // Get dimensions for popup box.
                 Point boxDimens = mFactorsPopupBox.getMeasuredDimensions();
                 // Get screen dimensions to avoid obscuring by bezels.
                 DisplayMetrics metrics = new DisplayMetrics();
                 getWindowManager().getDefaultDisplay().getMetrics(metrics);
-                // Initialize popup box location as view's location on screen.
-                PointF location = new PointF(childLocation[0], childLocation[1]);
                 // Check if popup box is below first row, only then place it above (this is the part where user's finger could obscure the box).
                 if (childPos >= spanCount)
                     location.y = Math.max(location.y - (layout.getHeight() + boxDimens.y), 0);
@@ -348,7 +350,7 @@ public class MainActivity extends AppCompatActivity
                 if (diff < 0)
                     location.x += diff;
                 // Finally, show the box at its proper location on screen.
-                mFactorsPopupBox.show(location, cellData);
+                mFactorsPopupBox.setLocation(location);
             }
 
             @Override
