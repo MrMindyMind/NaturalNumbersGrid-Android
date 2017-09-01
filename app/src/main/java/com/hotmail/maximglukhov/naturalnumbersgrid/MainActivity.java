@@ -34,10 +34,21 @@ public class MainActivity extends AppCompatActivity
      */
     private static final int DEFAULT_COLUMN_COUNT = 10;
 
-    // TEMPORARY
-    private static final int ADDITIONAL_ITEMS = 200;
+    /*
+     * Defines default buffer size.
+     */
+    private static final int DEFAULT_BUFFER_SIZE = 100;
 
     private static final int REQUEST_CODE_ACTIVITY_SETTINGS = 0;
+
+    /*
+     * Buffer size for loading extra cells into memory beforehand.
+     */
+    private int mBufferSize = DEFAULT_BUFFER_SIZE;
+    /*
+     * Extra cells is calculated as (bufferSize * spanCount).
+     */
+    private int mExtraCells;
 
     /*
      * Popup box for factors displaying.
@@ -116,9 +127,9 @@ public class MainActivity extends AppCompatActivity
             final int higherThreshold;
             if (mIsOverDraft) {
                 // Set lower threshold as half of original item count + added items
-                lowerThreshold = itemCount - (itemCount - ADDITIONAL_ITEMS) / 2;
+                lowerThreshold = itemCount - (itemCount - mExtraCells) / 2;
                 // Set high threshold as half of all items.
-                higherThreshold = (itemCount - ADDITIONAL_ITEMS) / 2;
+                higherThreshold = (itemCount - mExtraCells) / 2;
             } else {
                 // Set lower and higher threshold as 50% of current items.
                 lowerThreshold = itemCount / 2;
@@ -145,15 +156,15 @@ public class MainActivity extends AppCompatActivity
                             @Override
                             public void run() {
                                 // Remove previous added items.
-                                adapter.removeCells(0, ADDITIONAL_ITEMS);
+                                adapter.removeCells(0, mExtraCells);
                                 Log.d(LOG_TAG, "onScrolled :: run :: notifying range removed (0-x).");
                                 // Notify adapter.
-                                adapter.notifyItemRangeRemoved(0, ADDITIONAL_ITEMS);
+                                adapter.notifyItemRangeRemoved(0, mExtraCells);
                                 // Flag as no longer loading as our transaction has ended.
                                 mIsLoading = false;
                                 Log.d("MainActivity", "onScrolled :: run :: success.");
                                 // Check if we are at the bottom of the current list and trigger additional loading if we are.
-                                if (lastCompletelyVisibleItem >= (lowerThreshold - ADDITIONAL_ITEMS)) {
+                                if (lastCompletelyVisibleItem >= (lowerThreshold - mExtraCells)) {
                                     Log.d("MainActivity", "onScrolled :: run :: running onScrolled once again.");
                                     onScrolled(recyclerView, dx, dy);
                                 }
@@ -174,7 +185,7 @@ public class MainActivity extends AppCompatActivity
                     mGenerator.setRangeStart(adapter.getData().get(itemCount - 1)
                             .getValue() + 1);
                     mGenerator.setDirection(true);
-                    mGenerator.start(ADDITIONAL_ITEMS);
+                    mGenerator.start(mExtraCells);
 
                     // Flag that we currently have more items than usual, and they must be removed at some point before adding more items.
                     mIsOverDraft = true;
@@ -192,7 +203,7 @@ public class MainActivity extends AppCompatActivity
                     // Check if we have extra cells.
                     if (mIsOverDraft) {
                         // Find first index of extra cells.
-                        final int removeIndex = itemCount - ADDITIONAL_ITEMS;
+                        final int removeIndex = itemCount - mExtraCells;
 
                         // Flag that we no longer have extra cells.
                         mIsOverDraft = false;
@@ -205,9 +216,9 @@ public class MainActivity extends AppCompatActivity
                             public void run() {
                                 Log.d(LOG_TAG, "onScrolled :: run :: removing extra cells: (" + removeIndex + "-" + removeIndex + "+x).");
                                 // Remove previous added items.
-                                adapter.removeCells(removeIndex, ADDITIONAL_ITEMS);
+                                adapter.removeCells(removeIndex, mExtraCells);
                                 Log.d(LOG_TAG, "onScrolled :: run :: notifying range removed (" + removeIndex + "-" + removeIndex + "+x).");
-                                adapter.notifyItemRangeRemoved(removeIndex, ADDITIONAL_ITEMS);
+                                adapter.notifyItemRangeRemoved(removeIndex, mExtraCells);
 
                                 // Flag as no longer loading.
                                 mIsLoading = false;
@@ -223,7 +234,7 @@ public class MainActivity extends AppCompatActivity
                                     // Buffer additional items for infinite scrolling experience.
                                     mGenerator.setRangeStart(lowest - 1);
                                     mGenerator.setDirection(false);
-                                    mGenerator.start(ADDITIONAL_ITEMS);
+                                    mGenerator.start(mExtraCells);
 
                                     // Flag that we currently have more items than usual, and they must be removed at some point before adding more items.
                                     mIsOverDraft = true;
@@ -245,7 +256,7 @@ public class MainActivity extends AppCompatActivity
                         // Buffer additional items for infinite scrolling experience
                         mGenerator.setRangeStart(lowest - 1);
                         mGenerator.setDirection(false);
-                        mGenerator.start(ADDITIONAL_ITEMS);
+                        mGenerator.start(mExtraCells);
 
                         // Flag that we currently have more items than usual, and they must be removed at some point before adding more items.
                         mIsOverDraft = true;
@@ -426,13 +437,14 @@ public class MainActivity extends AppCompatActivity
         mFactorsPopupBox = new FactorsPopupBox(MainActivity.this,
                 (ViewGroup) findViewById(R.id.factorsBoxLayout));
 
-        syncPreferences();
-
         /*
          * Initialize number generator.
          */
         mGenerator = new NumberCellGeneratorTask(0, 300, true, this,
                 new Handler(getMainLooper()));
+
+        syncPreferences();
+
         mGenerator.start();
     }
 
@@ -559,21 +571,69 @@ public class MainActivity extends AppCompatActivity
                 .getDefaultSharedPreferences(MainActivity.this);
 
         int spanCount = preferences.getInt(getString(
-                R.string.preference_columns_key),
-                DEFAULT_COLUMN_COUNT);
+                R.string.preference_columns_key), DEFAULT_COLUMN_COUNT);
 
-        GridLayoutManager layoutManager = (GridLayoutManager)
-                mNumbersGridRecyclerView.getLayoutManager();
+        int bufferSize = preferences.getInt(getString(
+                R.string.preference_buffer_key), DEFAULT_BUFFER_SIZE);
 
-        // Update span count (columns).
-        if (layoutManager.getSpanCount() != spanCount) {
-            layoutManager.setSpanCount(spanCount);
-            mNumbersGridRecyclerView.post(new Runnable() {
-                @Override
-                public void run() {
-                    mNumbersGridRecyclerView.getAdapter().notifyDataSetChanged();
-                }
-            });
+        // Apply data from preference.
+        setSpanAndBufferSize(spanCount, bufferSize);
+    }
+
+    private void setSpanAndBufferSize(int spanCount, int bufferSize) {
+        int currentSpanCount = ((GridLayoutManager) mNumbersGridRecyclerView
+                .getLayoutManager()).getSpanCount();
+
+        // Check if any setting has changed.
+        boolean isSpanCountChanged = (currentSpanCount != spanCount);
+        boolean isBufferSizeChanged = (bufferSize != mBufferSize);
+
+        // Ensure extra cells is updated.
+        if (mExtraCells != (spanCount * bufferSize))
+            isBufferSizeChanged = true;
+
+        if (isSpanCountChanged || isBufferSizeChanged) {
+            /*
+             * Apply buffer size and span.
+             */
+            ((GridLayoutManager)
+                    mNumbersGridRecyclerView.getLayoutManager())
+                    .setSpanCount(spanCount);
+
+            mBufferSize = bufferSize;
+
+            // Calculate updated extra cells.
+            mExtraCells = mBufferSize * spanCount;
+
+            /*
+             * Changing either buffer size or span count changes amount of extra
+             * cells to load, therefore everything must be reloaded.
+             */
+
+            // Reset flags.
+            mIsHighlighted = false;
+            mIsOverDraft = false;
+            mIsLoading = false;
+
+            // Create new adapter.
+            mNumbersGridRecyclerView.setAdapter(
+                    new NumberCellAdapter(spanCount));
+            // Redraw RecyclerView.
+            mNumbersGridRecyclerView.invalidate();
+            // Start generating first numbers.
+            mGenerator.start(0, 300, true);
         }
+    }
+
+    /*
+     * Helper method for span count updating
+     */
+    private void setSpanCount(int spanCount) {
+        setSpanAndBufferSize(spanCount, mBufferSize);
+    }
+
+    private void setBufferSize(int bufferSize) {
+        setSpanAndBufferSize(((GridLayoutManager) mNumbersGridRecyclerView
+                .getLayoutManager()).getSpanCount(), bufferSize);
     }
 }

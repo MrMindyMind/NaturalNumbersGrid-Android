@@ -13,4 +13,9 @@
     <string name="preference_category_key_grid_settings">pref_grid_settings</string>
     <string name="preference_columns_title">Columns</string>
     <string name="preference_columns_key">pref_column</string>
+    <!-- Buffer Preferences -->
+    <string name="preference_buffer_title">Buffer Size</string>
+    <string name="preference_buffer_key">pref_buffer</string>
+    <string name="preference_buffer_summary">Amount of extra cells to load in memory (multiplied by columns). Very high values will result in high memory usage,
+        while very low values will in result jagged scrolling.</string>
 </resources>
