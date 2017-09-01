@@ -49,7 +49,6 @@ public class NumberCellAdapter
 
     @Override
     public void onBindViewHolder(ViewHolder holder, int position) {
-        if (holder.numberTextView != null && mNumberCells.size() > position)
         // Apply number cell data to number cell text view.
         holder.numberTextView.setCellData(mNumberCells.get(position));
     }
