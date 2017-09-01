@@ -12,6 +12,8 @@ import android.support.v7.widget.RecyclerView;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.GestureDetector;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -461,6 +463,21 @@ public class MainActivity extends AppCompatActivity
                 Log.d(LOG_TAG, "onCellsReady :: run :: success.");
             }
         });
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.menuItemSettings:
+                return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 
     /*
