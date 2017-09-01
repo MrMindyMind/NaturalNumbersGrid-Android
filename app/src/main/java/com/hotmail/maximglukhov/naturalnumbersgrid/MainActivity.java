@@ -43,7 +43,7 @@ public class MainActivity extends AppCompatActivity
      * Popup box for factors displaying.
      */
 
-    FactorsPopupBox mFactorsPopupBox;
+    private FactorsPopupBox mFactorsPopupBox;
 
     /*
      * RecyclerView for entire grid.
