@@ -30,6 +30,11 @@ public class MainActivity extends AppCompatActivity
     private static final String LOG_TAG = "MainActivity";
 
     /*
+     * Request code for settings activity.
+     */
+    private static final int REQUEST_CODE_ACTIVITY_SETTINGS = 0;
+
+    /*
      * Defines default amount of columns (span) for grid layout.
      */
     private static final int DEFAULT_COLUMN_COUNT = 10;
@@ -38,8 +43,6 @@ public class MainActivity extends AppCompatActivity
      * Defines default buffer size.
      */
     private static final int DEFAULT_BUFFER_SIZE = 100;
-
-    private static final int REQUEST_CODE_ACTIVITY_SETTINGS = 0;
 
     /*
      * Buffer size for loading extra cells into memory beforehand.
