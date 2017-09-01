@@ -9,8 +9,8 @@
         <android.support.v7.preference.SeekBarPreference
             android:title="@string/preference_columns_title"
             android:key="@string/preference_columns_key"
-            android:defaultValue="@integer/defaultColumns"
-            app:min="@integer/minColumns"
-            android:max="@integer/maxColumns"/>
+            android:defaultValue="@integer/preference_default_columns"
+            app:min="@integer/preference_min_columns"
+            android:max="@integer/preference_max_columns"/>
     </PreferenceCategory>
 </PreferenceScreen>

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Column Preference Defaults -->
-    <integer name="defaultColumns">10</integer>
-    <integer name="maxColumns">30</integer>
-    <integer name="minColumns">1</integer>
+    <integer name="preference_default_columns">10</integer>
+    <integer name="preference_max_columns">30</integer>
+    <integer name="preference_min_columns">1</integer>
 </resources>
