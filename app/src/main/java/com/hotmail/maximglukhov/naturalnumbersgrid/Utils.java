@@ -30,4 +30,52 @@ public class Utils {
 
         return true;
     }
+
+    /**
+     * <p>Reverses array's order of items.</p>
+     * @param array array to reverse.
+     */
+    public static void reverseArray(Object[] array) {
+        int halfLength = array.length / 2;
+        // Iterate only to half length to achieve actual reverse using swap.
+        for (int i = 0; i < halfLength; i++) {
+            swap(array, i, array.length - i - 1);
+        }
+
+    }
+
+    /**
+     * <p>Swaps two values in given array by their indices.</p>
+     * @param array array to swap values for.
+     * @param first first index.
+     * @param second second index.
+     */
+    public static void swap(Object[] array, int first, int second) {
+        Object tmp = array[first];
+        array[first] = array[second];
+        array[second] = tmp;
+    }
+
+    /**
+     * <p>Builds string for given array.</p>
+     * @param arr array to build string for.
+     * @return string containing all if array's elements.
+     */
+    public static String getStringForArray(Object[] arr) {
+        StringBuilder stringBuilder = new StringBuilder('[');
+        // Iterate through all elements.
+        for (Object element : arr) {
+            // Append only non-null elements.
+            if (arr != null) {
+                stringBuilder.append(element);
+                stringBuilder.append(',');
+            }
+        }
+        // Remove last comma.
+        stringBuilder.deleteCharAt(stringBuilder.length() - 1);
+
+        stringBuilder.append(']');
+
+        return stringBuilder.toString();
+    }
 }
