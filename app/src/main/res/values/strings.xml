@@ -8,7 +8,7 @@
     <string name="number_0_factors">N</string>
     <!-- Menu Settings -->
     <string name="settings_title">Settings</string>
-    <!-- Preferences -->
+    <!-- Column Preferences -->
     <string name="preference_category_title_grid_settings">Grid Settings</string>
     <string name="preference_category_key_grid_settings">pref_grid_settings</string>
     <string name="preference_columns_title">Columns</string>
