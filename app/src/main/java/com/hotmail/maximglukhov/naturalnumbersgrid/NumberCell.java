@@ -2,6 +2,9 @@ package com.hotmail.maximglukhov.naturalnumbersgrid;
 
 import android.support.annotation.IntRange;
 
+import java.util.HashSet;
+import java.util.Set;
+
 /**
  * <p>Data class for {@link android.support.v7.widget.RecyclerView} containing cells, displaying all natural numbers.</p>
  */
@@ -17,12 +20,19 @@ public class NumberCell {
      */
     private boolean mIsPrime;
 
+    /*
+     * Set containing all factors for the value assigned to this cell.
+     */
+    private Set<Long> mFactors;
+
     /**
      * <p>Constructor for NumberCell.</p>
      * @param value value to assign to this cell.
      */
     public NumberCell(@IntRange(from = 0) final long value) {
         mValue = value < 0 ? 0 : value;
+
+        mFactors = new HashSet<>();
     }
 
     /**
@@ -31,6 +41,27 @@ public class NumberCell {
      */
     public void updatePrimality() {
         mIsPrime = Utils.isPrime(mValue);
+    }
+
+    /**
+     * <p>Calculates all factors for value assigned to this cell, excluding 1 and the value itself.
+     */
+    public void factorize() {
+        if (!isPrime()) {
+            mFactors = Utils.factorize(mValue);
+        } else {
+            mFactors.clear();
+        }
+    }
+
+    /**
+     * <p>Gets all factors for value assigned to this cell.
+     * <br>May not be updated if {@link #updatePrimality()} and {@link #factorize()} were never called.
+     * <br>Returns empty set for prime numbers.</p>
+     * @return
+     */
+    public Set<Long> getFactors() {
+        return mFactors;
     }
 
     /**

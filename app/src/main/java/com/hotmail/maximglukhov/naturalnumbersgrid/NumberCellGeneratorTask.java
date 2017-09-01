@@ -106,6 +106,7 @@ public class NumberCellGeneratorTask implements Runnable {
             // Generate new cell with primality tested.
             NumberCell cell = new NumberCell(mIsPositive ? mRangeStart++ : mRangeStart--);
             cell.updatePrimality();
+            cell.factorize();
             cells[i] = cell;
         }
 
