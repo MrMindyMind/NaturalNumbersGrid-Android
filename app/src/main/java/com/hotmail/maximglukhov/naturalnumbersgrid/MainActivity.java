@@ -147,9 +147,6 @@ public class MainActivity extends AppCompatActivity
 
             Log.d(LOG_TAG, "onScrolled :: isLoading=" + mIsLoading + " dx=" + dx + " dy=" + dy + " isMeasuring=" + mIsMeasuring);
 
-            final GridLayoutManager gridLayoutManager = (GridLayoutManager)
-                    mNumbersGridRecyclerView.getLayoutManager();
-
             if (mIsMeasuring) {
                 /*
                  * The following code is required to measure amount of visible items in page.
@@ -161,7 +158,7 @@ public class MainActivity extends AppCompatActivity
                  */
 
                 // Get column count.
-                int spanCount = gridLayoutManager.getSpanCount();
+                int spanCount = mGridLayoutManager.getSpanCount();
                 // Get currently visible item count.
                 int currentVisibleItems = mNumbersGridRecyclerView
                         .getChildCount();
@@ -212,8 +209,8 @@ public class MainActivity extends AppCompatActivity
             /*
              * Calculate visible items.
              */
-            final int lastCompletelyVisibleItem = gridLayoutManager.findLastCompletelyVisibleItemPosition();
-            final int firstCompletelyVisibleItem = gridLayoutManager.findFirstCompletelyVisibleItemPosition();
+            final int lastCompletelyVisibleItem = mGridLayoutManager.findLastCompletelyVisibleItemPosition();
+            final int firstCompletelyVisibleItem = mGridLayoutManager.findFirstCompletelyVisibleItemPosition();
 
             final int itemCount = adapter.getData().size();
 
@@ -469,8 +466,7 @@ public class MainActivity extends AppCompatActivity
                  */
 
         // Get span count to check if popup box is displayed under user's finger (first row).
-        int spanCount = ((GridLayoutManager) mNumbersGridRecyclerView.
-                getLayoutManager()).getSpanCount();
+        int spanCount = mGridLayoutManager.getSpanCount();
 
         // Get view's location on screen.
         int[] childLocation = new int[2];
@@ -680,8 +676,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void setSpanAndBufferSize(int spanCount, int bufferSize) {
-        int currentSpanCount = ((GridLayoutManager) mNumbersGridRecyclerView
-                .getLayoutManager()).getSpanCount();
+        int currentSpanCount = mGridLayoutManager.getSpanCount();
 
         // Check if any setting has changed.
         boolean isSpanCountChanged = (currentSpanCount != spanCount);
@@ -695,9 +690,7 @@ public class MainActivity extends AppCompatActivity
             /*
              * Apply buffer size and span.
              */
-            ((GridLayoutManager)
-                    mNumbersGridRecyclerView.getLayoutManager())
-                    .setSpanCount(spanCount);
+            mGridLayoutManager.setSpanCount(spanCount);
 
             mBufferSize = bufferSize;
 
@@ -721,8 +714,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void setBufferSize(int bufferSize) {
-        setSpanAndBufferSize(((GridLayoutManager) mNumbersGridRecyclerView
-                .getLayoutManager()).getSpanCount(), bufferSize);
+        setSpanAndBufferSize(mGridLayoutManager.getSpanCount(), bufferSize);
     }
 
     private void reloadGrid(final int spanCount,
@@ -751,8 +743,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void reloadGrid(boolean requiresMeasuring) {
-        reloadGrid(((GridLayoutManager) mNumbersGridRecyclerView
-                .getLayoutManager()).getSpanCount(), requiresMeasuring);
+        reloadGrid(mGridLayoutManager.getSpanCount(), requiresMeasuring);
     }
     
     private void generateCells(long start, int range, boolean direction) {
