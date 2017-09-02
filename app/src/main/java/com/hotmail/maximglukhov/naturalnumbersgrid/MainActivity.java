@@ -366,7 +366,7 @@ public class MainActivity extends AppCompatActivity
         mNumbersGridRecyclerView = (RecyclerView) findViewById(
                 R.id.numbersGridRecyclerView);
         mNumbersGridRecyclerView.setLayoutManager(mGridLayoutManager);
-        mNumbersGridRecyclerView.setAdapter(new NumberCellAdapter(DEFAULT_COLUMN_COUNT));
+        mNumbersGridRecyclerView.setAdapter(new NumberCellAdapter());
         mNumbersGridRecyclerView.addOnScrollListener(mRecyclerViewScrollListener);
         mNumbersGridRecyclerView.addOnItemTouchListener(this);
 
@@ -466,11 +466,11 @@ public class MainActivity extends AppCompatActivity
             mIsHighlighted = true;
         }
 
-                /*
-                 * Code below handles popup box position calculating.
-                 * The goal is displaying the box on top of the cell properly, and centered right above it.
-                 * Handles edge cases where box might be obscured by screen boundaries, and even user's finger.
-                 */
+        /*
+         * Code below handles popup box position calculating.
+         * The goal is displaying the box on top of the cell properly, and centered right above it.
+         * Handles edge cases where box might be obscured by screen boundaries, and even user's finger.
+         */
 
         // Get span count to check if popup box is displayed under user's finger (first row).
         int spanCount = mGridLayoutManager.getSpanCount();
@@ -533,9 +533,9 @@ public class MainActivity extends AppCompatActivity
             if (mIsHighlighted && (mSelectedFactors != null)) {
                 toggleHighlightForVisibleItems(true, mSelectedFactors);
 
-                        /*
-                         * Code below makes sure popup box stays above selected cell.
-                         */
+                /*
+                 * Code below makes sure popup box stays above selected cell.
+                 */
 
                 if (mOldY < 0) {
                     // Initialize y (first movement on screen since reset or at all).
@@ -737,8 +737,7 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void run() {
                 // Create new adapter.
-                mNumbersGridRecyclerView.setAdapter(new NumberCellAdapter(
-                        spanCount));
+                mNumbersGridRecyclerView.setAdapter(new NumberCellAdapter());
                 // Redraw RecyclerView with empty grid.
                 mNumbersGridRecyclerView.invalidate();
                 // Show loading animation.

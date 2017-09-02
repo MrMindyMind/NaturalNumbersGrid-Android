@@ -23,21 +23,11 @@ public class NumberCellAdapter
      */
     private List<NumberCell> mNumberCells;
 
-    /*
-     * Defines amount of columns in grid.
-     */
-    private int mSpanCount;
-
-    private boolean mIsLoading;
-    private boolean mIsScrollingDown;
-
     /**
      * <p>Constructor for this adapter.</p>
      */
-    public NumberCellAdapter(int spanCount) {
+    public NumberCellAdapter() {
         mNumberCells = new ArrayList<>();
-
-        mSpanCount = spanCount;
     }
 
     @Override
