@@ -75,6 +75,9 @@ public class NumberCellAdapter
         if (start == cellListSize - 1)
             start = cellListSize;
 
+        if (start < 0)
+            return 0;
+
         int count = 0;
         for (int i = 0; i < range; i++) {
             // Ensure cells amount matches range.
