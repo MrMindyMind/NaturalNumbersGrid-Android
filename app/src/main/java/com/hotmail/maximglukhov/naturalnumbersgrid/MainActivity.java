@@ -192,7 +192,7 @@ public class MainActivity extends AppCompatActivity
                     mMinItemCount = totalCells;
 
                     // Pass false parameter to avoid measuring.
-                    reloadGrid(spanCount, false);
+                    reloadGrid(false);
 
                     // Exit early to avoid further scrolling processing.
                     return;
@@ -724,8 +724,7 @@ public class MainActivity extends AppCompatActivity
         setSpanAndBufferSize(mGridLayoutManager.getSpanCount(), bufferSize);
     }
 
-    private void reloadGrid(final int spanCount,
-                            boolean requiresMeasuring) {
+    private void reloadGrid(boolean requiresMeasuring) {
         // Reset flags.
         mIsHighlighted = false;
         mIsOverDraft = false;
@@ -739,17 +738,13 @@ public class MainActivity extends AppCompatActivity
                 // Create new adapter.
                 mNumbersGridRecyclerView.setAdapter(new NumberCellAdapter());
                 // Redraw RecyclerView with empty grid.
-                mNumbersGridRecyclerView.invalidate();
+                mNumbersGridRecyclerView.getAdapter().notifyDataSetChanged();
                 // Show loading animation.
                 toggleGridLoadingProgress(true);
                 // Start generating first numbers.
                 generateCells(0, mMinItemCount, true);
             }
         });
-    }
-
-    private void reloadGrid(boolean requiresMeasuring) {
-        reloadGrid(mGridLayoutManager.getSpanCount(), requiresMeasuring);
     }
     
     private void generateCells(long start, int range, boolean direction) {
