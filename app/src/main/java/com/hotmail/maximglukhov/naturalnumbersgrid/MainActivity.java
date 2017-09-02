@@ -25,7 +25,8 @@ import java.util.ArrayList;
 import java.util.Set;
 
 public class MainActivity extends AppCompatActivity
-        implements NumberCellGeneratorTask.NumberCellGeneratorListener {
+        implements NumberCellGeneratorTask.NumberCellGeneratorListener,
+        GestureDetector.OnGestureListener, RecyclerView.OnItemTouchListener {
 
     private static final String LOG_TAG = "MainActivity";
 
@@ -73,6 +74,10 @@ public class MainActivity extends AppCompatActivity
      * RecyclerView for entire grid.
      */
     private RecyclerView mNumbersGridRecyclerView;
+    /*
+     * GridLayoutManager for RecyclerView.
+     */
+    private GridLayoutManager mGridLayoutManager;
 
     /*
      * Grid number cells generator task (runs on separate thread).
@@ -113,6 +118,19 @@ public class MainActivity extends AppCompatActivity
      */
     private Set<Long> mSelectedFactors;
 
+    /*
+     * GestureDetector to identify long press.
+     */
+    private GestureDetectorCompat mGestureDetector;
+
+    /*
+     * Keep reference of previous y pos for delta y calculation in RecyclerView's item touch listener.
+     */
+    private float mOldY = -1.0f;
+
+    /*
+     * RecyclerView's scroll listener
+     */
     private RecyclerView.OnScrollListener mRecyclerViewScrollListener =
             new RecyclerView.OnScrollListener() {
 
@@ -349,178 +367,28 @@ public class MainActivity extends AppCompatActivity
         mHighlightedCells = new ArrayList<>();
 
         // Create gesture detector for natural numbers grid.
-        final GestureDetectorCompat numbersGridGestureDetector =
-                new GestureDetectorCompat(MainActivity.this,
-                        new GestureDetector.OnGestureListener() {
-
-            @Override
-            public boolean onDown(MotionEvent motionEvent) { return true; }
-
-            @Override
-            public void onShowPress(MotionEvent motionEvent) {}
-
-            @Override
-            public boolean onSingleTapUp(MotionEvent motionEvent) { return true; }
-
-            @Override
-            public boolean onScroll(MotionEvent motionEvent,
-                                    MotionEvent motionEvent1,
-                                    float dx, float dy) {
-                return true;
-            }
-
-            @Override
-            public void onLongPress(MotionEvent motionEvent) {
-                Log.d(LOG_TAG, "OnGestureListener :: onLongPress :: e=" + motionEvent);
-                // Find child's root view matching touch coordinates.
-                View layout = mNumbersGridRecyclerView.findChildViewUnder(
-                        motionEvent.getX(), motionEvent.getY());
-                // Find adapter's position for this layout.
-                int childPos = mNumbersGridRecyclerView
-                        .getChildAdapterPosition(layout);
-                // Get cell data for this child.
-                NumberCellAdapter adapter = (NumberCellAdapter)
-                        mNumbersGridRecyclerView.getAdapter();
-                NumberCell cellData = adapter.getData().get(childPos);
-                Log.d(LOG_TAG, "OnGestureListener :: onLongPress :: child=" + cellData + " factors=" + cellData.getFactors());
-
-                // Avoid any operations for primes and 0,1,2,3. No cells should highlight for these values.
-                if (!cellData.isPrime() && (cellData.getValue() > 3)) {
-                    mSelectedFactors = cellData.getFactors();
-                    toggleHighlightForVisibleItems(true, mSelectedFactors);
-                    mIsHighlighted = true;
-                }
-
-                /*
-                 * Code below handles popup box position calculating.
-                 * The goal is displaying the box on top of the cell properly, and centered right above it.
-                 * Handles edge cases where box might be obscured by screen boundaries, and even user's finger.
-                 */
-
-                // Get span count to check if popup box is displayed under user's finger (first row).
-                int spanCount = ((GridLayoutManager) mNumbersGridRecyclerView.
-                        getLayoutManager()).getSpanCount();
-
-                // Get view's location on screen.
-                int[] childLocation = new int[2];
-                layout.getLocationInWindow(childLocation);
-                // Initialize popup box location as view's location on screen.
-                PointF location = new PointF(childLocation[0], childLocation[1]);
-                // Show popup box early to get accurate measurements.
-                mFactorsPopupBox.show(location, cellData);
-                // Get dimensions for popup box.
-                Point boxDimens = mFactorsPopupBox.getMeasuredDimensions();
-                // Get screen dimensions to avoid obscuring by bezels.
-                DisplayMetrics metrics = new DisplayMetrics();
-                getWindowManager().getDefaultDisplay().getMetrics(metrics);
-                // Check if popup box is below first row, only then place it above (this is the part where user's finger could obscure the box).
-                if (childPos >= spanCount)
-                    location.y = Math.max(location.y - (layout.getHeight() + boxDimens.y), 0);
-                // Update horizontal location to be centered above selected cell, or at least 0.
-                location.x = Math.max(location.x - (boxDimens.x/2.0f) + layout.getWidth() / 2.0f, 0);
-                // Check if popup box will be out of screen bounds and move it to the left.
-                float diff = metrics.widthPixels - (location.x + boxDimens.x);
-                // NOTE: despite using addition, diff is negative. Resulting in box moving to the left.
-                if (diff < 0)
-                    location.x += diff;
-                // Finally, show the box at its proper location on screen.
-                mFactorsPopupBox.setLocation(location);
-            }
-
-            @Override
-            public boolean onFling(MotionEvent motionEvent,
-                                   MotionEvent motionEvent1,
-                                   float v, float v1) { return false; }
-        });
-
-        /*
-         * Initialize grid RecyclerView.
-         */
-        mNumbersGridRecyclerView = (RecyclerView) findViewById(
-                R.id.numbersGridRecyclerView);
-        final GridLayoutManager gridLayoutManager = new GridLayoutManager(
-                MainActivity.this, DEFAULT_COLUMN_COUNT,
-                LinearLayoutManager.VERTICAL, false);
-        mNumbersGridRecyclerView.setLayoutManager(gridLayoutManager);
-        mNumbersGridRecyclerView.setAdapter(new NumberCellAdapter(DEFAULT_COLUMN_COUNT));
-        mNumbersGridRecyclerView.addOnScrollListener(mRecyclerViewScrollListener);
-        mNumbersGridRecyclerView.addOnItemTouchListener(new RecyclerView.OnItemTouchListener() {
-
-            /*
-             * Keep reference of previous y pos for delta y calculation.
-             */
-            private float oldY = -1.0f;
-
-            @Override
-            public boolean onInterceptTouchEvent(RecyclerView rv, MotionEvent e) {
-                // Check if user has long pressed.
-                numbersGridGestureDetector.onTouchEvent(e);
-
-                if (e.getAction() == MotionEvent.ACTION_UP) {
-                    // Return all cells to original highlight state.
-                    if (mIsHighlighted) {
-                        toggleHighlightForVisibleItems(false, null);
-                        mSelectedFactors = null;
-                        mIsHighlighted = false;
-
-                        // Set old y as -1 to reset delta calculation.
-                        oldY = -1.0f;
-                    }
-
-                    mFactorsPopupBox.hide();
-                } else if (e.getAction() == MotionEvent.ACTION_MOVE) {
-                    // Highlight new visible cells as user scrolls.
-                    if (mIsHighlighted && (mSelectedFactors != null)) {
-                        toggleHighlightForVisibleItems(true, mSelectedFactors);
-
-                        /*
-                         * Code below makes sure popup box stays above selected cell.
-                         */
-
-                        if (oldY < 0) {
-                            // Initialize y (first movement on screen since reset or at all).
-                            oldY = e.getY();
-                        } else {
-                            // Calculate delta so we can move the popup box later.
-                            float dy = e.getY() - oldY;
-                            // Check if the result of moving the box will stay above 0 (visible).
-                            boolean isBelowTop = ((mFactorsPopupBox.getLocation().y + dy) > 0);
-                            // Get the very first visible cell position.
-                            int firstVisible = gridLayoutManager.findFirstCompletelyVisibleItemPosition();
-                            // Check if the result of moving the box will make it no longer above selected cell.
-                            boolean isTopScrollable = (dy < 0 || firstVisible > 0);
-
-                            if (isBelowTop && isTopScrollable) {
-                                // Finally, move the box by delta y.
-                                mFactorsPopupBox.moveY(dy);
-                                // Note: only updating oldY when we make any movement(*). This makes the box move smoothly rather than jumping around.
-                                oldY = e.getY();
-                            }
-
-                            // (*) Update oldY when we can't scroll up, because if user tries to scroll down, popup box should move along.
-                            if (!isTopScrollable)
-                                oldY = e.getY();
-                        }
-                    }
-                }
-                return false;
-            }
-
-            @Override
-            public void onTouchEvent(RecyclerView rv, MotionEvent e) {}
-
-            @Override
-            public void onRequestDisallowInterceptTouchEvent(boolean disallowIntercept) {}
-        });
-
-        mFactorsPopupBox = new FactorsPopupBox(MainActivity.this,
-                (ViewGroup) findViewById(R.id.factorsBoxLayout));
+        mGestureDetector = new GestureDetectorCompat(this, this);
 
         /*
          * Initialize number generator.
          */
         mGenerator = new NumberCellGeneratorTask(0, mMinItemCount,
                 true, this, new Handler(getMainLooper()));
+
+        /*
+         * Initialize grid RecyclerView.
+         */
+        mGridLayoutManager = new GridLayoutManager(MainActivity.this,
+                DEFAULT_COLUMN_COUNT, LinearLayoutManager.VERTICAL, false);
+        mNumbersGridRecyclerView = (RecyclerView) findViewById(
+                R.id.numbersGridRecyclerView);
+        mNumbersGridRecyclerView.setLayoutManager(mGridLayoutManager);
+        mNumbersGridRecyclerView.setAdapter(new NumberCellAdapter(DEFAULT_COLUMN_COUNT));
+        mNumbersGridRecyclerView.addOnScrollListener(mRecyclerViewScrollListener);
+        mNumbersGridRecyclerView.addOnItemTouchListener(this);
+
+        mFactorsPopupBox = new FactorsPopupBox(MainActivity.this,
+                (ViewGroup) findViewById(R.id.factorsBoxLayout));
 
         syncPreferences();
 
@@ -529,6 +397,197 @@ public class MainActivity extends AppCompatActivity
 
         mGenerator.start();
     }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.menuItemSettings:
+                Intent intent = new Intent(MainActivity.this,
+                        SettingsActivity.class);
+                startActivityForResult(intent, REQUEST_CODE_ACTIVITY_SETTINGS);
+                return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        Log.d(LOG_TAG," onActivityResult :: requestCode=" + requestCode + " resultCode=" + resultCode);
+
+        switch (requestCode) {
+            case REQUEST_CODE_ACTIVITY_SETTINGS:
+                if (resultCode == RESULT_OK) {
+                    // Preferences have been updated, apply changes.
+                    syncPreferences();
+                }
+                break;
+        }
+    }
+
+    /*
+     * GestureDetector.OnGestureListener callbacks.
+     */
+
+    @Override
+    public boolean onDown(MotionEvent motionEvent) {
+        return false;
+    }
+
+    @Override
+    public void onShowPress(MotionEvent motionEvent) {
+
+    }
+
+    @Override
+    public boolean onSingleTapUp(MotionEvent motionEvent) {
+        return false;
+    }
+
+    @Override
+    public boolean onScroll(MotionEvent motionEvent, MotionEvent motionEvent1, float v, float v1) {
+        return false;
+    }
+
+    @Override
+    public void onLongPress(MotionEvent motionEvent) {
+        Log.d(LOG_TAG, "OnGestureListener :: onLongPress :: e=" + motionEvent);
+        // Find child's root view matching touch coordinates.
+        View layout = mNumbersGridRecyclerView.findChildViewUnder(
+                motionEvent.getX(), motionEvent.getY());
+        // Find adapter's position for this layout.
+        int childPos = mNumbersGridRecyclerView
+                .getChildAdapterPosition(layout);
+        // Get cell data for this child.
+        NumberCellAdapter adapter = (NumberCellAdapter)
+                mNumbersGridRecyclerView.getAdapter();
+        NumberCell cellData = adapter.getData().get(childPos);
+        Log.d(LOG_TAG, "OnGestureListener :: onLongPress :: child=" + cellData + " factors=" + cellData.getFactors());
+
+        // Avoid any operations for primes and 0,1,2,3. No cells should highlight for these values.
+        if (!cellData.isPrime() && (cellData.getValue() > 3)) {
+            mSelectedFactors = cellData.getFactors();
+            toggleHighlightForVisibleItems(true, mSelectedFactors);
+            mIsHighlighted = true;
+        }
+
+                /*
+                 * Code below handles popup box position calculating.
+                 * The goal is displaying the box on top of the cell properly, and centered right above it.
+                 * Handles edge cases where box might be obscured by screen boundaries, and even user's finger.
+                 */
+
+        // Get span count to check if popup box is displayed under user's finger (first row).
+        int spanCount = ((GridLayoutManager) mNumbersGridRecyclerView.
+                getLayoutManager()).getSpanCount();
+
+        // Get view's location on screen.
+        int[] childLocation = new int[2];
+        layout.getLocationInWindow(childLocation);
+        // Initialize popup box location as view's location on screen.
+        PointF location = new PointF(childLocation[0], childLocation[1]);
+        // Show popup box early to get accurate measurements.
+        mFactorsPopupBox.show(location, cellData);
+        // Get dimensions for popup box.
+        Point boxDimens = mFactorsPopupBox.getMeasuredDimensions();
+        // Get screen dimensions to avoid obscuring by bezels.
+        DisplayMetrics metrics = new DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getMetrics(metrics);
+        // Check if popup box is below first row, only then place it above (this is the part where user's finger could obscure the box).
+        if (childPos >= spanCount)
+            location.y = Math.max(location.y - (layout.getHeight() + boxDimens.y), 0);
+        // Update horizontal location to be centered above selected cell, or at least 0.
+        location.x = Math.max(location.x - (boxDimens.x/2.0f) + layout.getWidth() / 2.0f, 0);
+        // Check if popup box will be out of screen bounds and move it to the left.
+        float diff = metrics.widthPixels - (location.x + boxDimens.x);
+        // NOTE: despite using addition, diff is negative. Resulting in box moving to the left.
+        if (diff < 0)
+            location.x += diff;
+        // Finally, show the box at its proper location on screen.
+        mFactorsPopupBox.setLocation(location);
+    }
+
+    /*
+     * RecyclerView.SimpleOnItemTouchListener callback methods.
+     */
+
+    @Override
+    public boolean onFling(MotionEvent motionEvent, MotionEvent motionEvent1,
+                           float v, float v1) {
+        return false;
+    }
+
+    @Override
+    public boolean onInterceptTouchEvent(RecyclerView rv, MotionEvent e) {
+        // Check if user has long pressed.
+        mGestureDetector.onTouchEvent(e);
+
+        if (e.getAction() == MotionEvent.ACTION_UP) {
+            // Return all cells to original highlight state.
+            if (mIsHighlighted) {
+                toggleHighlightForVisibleItems(false, null);
+                mSelectedFactors = null;
+                mIsHighlighted = false;
+
+                // Set old y as -1 to reset delta calculation.
+                mOldY = -1.0f;
+            }
+
+            mFactorsPopupBox.hide();
+        } else if (e.getAction() == MotionEvent.ACTION_MOVE) {
+            // Highlight new visible cells as user scrolls.
+            if (mIsHighlighted && (mSelectedFactors != null)) {
+                toggleHighlightForVisibleItems(true, mSelectedFactors);
+
+                        /*
+                         * Code below makes sure popup box stays above selected cell.
+                         */
+
+                if (mOldY < 0) {
+                    // Initialize y (first movement on screen since reset or at all).
+                    mOldY = e.getY();
+                } else {
+                    // Calculate delta so we can move the popup box later.
+                    float dy = e.getY() - mOldY;
+                    // Check if the result of moving the box will stay above 0 (visible).
+                    boolean isBelowTop =
+                            ((mFactorsPopupBox.getLocation().y + dy) > 0);
+                    // Get the very first visible cell position.
+                    int firstVisible = mGridLayoutManager
+                            .findFirstCompletelyVisibleItemPosition();
+                    // Check if the result of moving the box will make it no longer above selected cell.
+                    boolean isTopScrollable = (dy < 0 || firstVisible > 0);
+
+                    if (isBelowTop && isTopScrollable) {
+                        // Finally, move the box by delta y.
+                        mFactorsPopupBox.moveY(dy);
+                        // Note: only updating mOldY when we make any movement(*). This makes the box move smoothly rather than jumping around.
+                        mOldY = e.getY();
+                    }
+
+                    // (*) Update mOldY when we can't scroll up, because if user tries to scroll down, popup box should move along.
+                    if (!isTopScrollable)
+                        mOldY = e.getY();
+                }
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public void onTouchEvent(RecyclerView rv, MotionEvent e) {}
+
+    @Override
+    public void onRequestDisallowInterceptTouchEvent(boolean disallowIntercept) {}
+
+    /*
+     * NumberCellGenerator callback.
+     */
 
     @Override
     public void onCellsReady(final NumberCell[] cells) {
@@ -565,38 +624,6 @@ public class MainActivity extends AppCompatActivity
                 Log.d(LOG_TAG, "onCellsReady :: run :: success.");
             }
         });
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.menu, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.menuItemSettings:
-                Intent intent = new Intent(MainActivity.this,
-                        SettingsActivity.class);
-                startActivityForResult(intent, REQUEST_CODE_ACTIVITY_SETTINGS);
-                return true;
-        }
-        return super.onOptionsItemSelected(item);
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        Log.d(LOG_TAG," onActivityResult :: requestCode=" + requestCode + " resultCode=" + resultCode);
-
-        switch (requestCode) {
-            case REQUEST_CODE_ACTIVITY_SETTINGS:
-                if (resultCode == RESULT_OK) {
-                    // Preferences have been updated, apply changes.
-                    syncPreferences();
-                }
-                break;
-        }
     }
 
     /*
