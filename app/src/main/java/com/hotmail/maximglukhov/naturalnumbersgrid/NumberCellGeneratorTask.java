@@ -270,7 +270,8 @@ public class NumberCellGeneratorTask implements Runnable {
         // Flag as idling.
         mIsGenerating = false;
 
-        if (mCurrentThread != null) {
+        if (mCurrentThread != null && Thread.currentThread()
+                != mUiHandler.getLooper().getThread()) {
             // Join spawned thread.
             boolean retry = true;
             while (retry) {
