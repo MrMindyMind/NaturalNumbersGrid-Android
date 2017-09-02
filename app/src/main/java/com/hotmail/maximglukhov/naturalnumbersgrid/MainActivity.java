@@ -20,6 +20,7 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ProgressBar;
 
 import java.util.ArrayList;
 import java.util.Set;
@@ -92,6 +93,16 @@ public class MainActivity extends AppCompatActivity
      * Indicates that there's a pending task to complete (insertion/removal)
      */
     private boolean mIsLoading;
+
+    /*
+     * Indicates that entire grid is reloading.
+     */
+    private boolean mIsGridLoading;
+
+    /*
+     * Loading animation (used for grid loading).
+     */
+    private ProgressBar mProgressBar;
 
     /*
      * Indicates that extra memory was loaded for infinite scroll effect.
@@ -338,6 +349,8 @@ public class MainActivity extends AppCompatActivity
         setContentView(R.layout.activity_main);
 
         mHighlightedCells = new ArrayList<>();
+
+        mProgressBar = (ProgressBar) findViewById(R.id.progressBar);
 
         // Create gesture detector for natural numbers grid.
         mGestureDetector = new GestureDetectorCompat(this, this);
@@ -594,6 +607,9 @@ public class MainActivity extends AppCompatActivity
                 // Flag as finished loading.
                 mIsLoading = false;
 
+                // Hide progress animation.
+                toggleGridLoadingProgress(false);
+
                 Log.d(LOG_TAG, "onCellsReady :: run :: success.");
             }
         });
@@ -726,6 +742,8 @@ public class MainActivity extends AppCompatActivity
                         spanCount));
                 // Redraw RecyclerView with empty grid.
                 mNumbersGridRecyclerView.invalidate();
+                // Show loading animation.
+                toggleGridLoadingProgress(true);
                 // Start generating first numbers.
                 generateCells(0, mMinItemCount, true);
             }
@@ -744,5 +762,19 @@ public class MainActivity extends AppCompatActivity
 
         // Flag as loading.
         mIsLoading = true;
+    }
+
+    private void toggleGridLoadingProgress(boolean toggle) {
+        if (toggle != mIsGridLoading) {
+            mIsGridLoading = toggle;
+            if (toggle) {
+                // It's important to set to invisible and not gone to ensure measurements are correct.
+                mNumbersGridRecyclerView.setVisibility(View.INVISIBLE);
+                mProgressBar.setVisibility(View.VISIBLE);
+            } else {
+                mProgressBar.setVisibility(View.GONE);
+                mNumbersGridRecyclerView.setVisibility(View.VISIBLE);
+            }
+        }
     }
 }
