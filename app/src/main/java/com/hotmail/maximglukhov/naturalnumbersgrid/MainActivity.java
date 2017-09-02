@@ -270,15 +270,10 @@ public class MainActivity extends AppCompatActivity
 
                     // Not at overdraft, simply add more items to the bottom.
 
-                    // Flag as loading.
-                    mIsLoading = true;
-
                     Log.d(LOG_TAG, "onScrolled :: starting generator.");
                     // Buffer additional items for infinite scrolling experience.
-                    mGenerator.setRangeStart(adapter.getData().get(itemCount - 1)
-                            .getValue() + 1);
-                    mGenerator.setDirection(true);
-                    mGenerator.start(mExtraCells);
+                    generateCells(adapter.getData().get(itemCount - 1)
+                            .getValue() + 1, mExtraCells, true);
 
                     // Flag that we currently have more items than usual, and they must be removed at some point before adding more items.
                     mIsOverDraft = true;
@@ -320,15 +315,9 @@ public class MainActivity extends AppCompatActivity
 
                                 // Check if we need to load more on the way up. This is true as long as the first item in data is not 0.
                                 if (lowest > NumberCellGeneratorTask.MIN_NUMBER) {
-                                    // Flag as loading.
-                                    mIsLoading = true;
-
                                     Log.d(LOG_TAG, "onScrolled :: starting generator (negative).");
                                     // Buffer additional items for infinite scrolling experience.
-                                    mGenerator.setRangeStart(lowest - 1);
-                                    mGenerator.setDirection(false);
-                                    mGenerator.start(mExtraCells);
-
+                                    generateCells(lowest - 1, mExtraCells, false);
                                     // Flag that we currently have more items than usual, and they must be removed at some point before adding more items.
                                     mIsOverDraft = true;
                                 }
@@ -342,15 +331,9 @@ public class MainActivity extends AppCompatActivity
 
                     // Not in overdraft, check if we need to add any more items (first item is not 0).
                     if (lowest > NumberCellGeneratorTask.MIN_NUMBER) {
-                        // Flag as loading.
-                        mIsLoading = true;
-
                         Log.d(LOG_TAG, "onScrolled :: starting generator (opposite).");
                         // Buffer additional items for infinite scrolling experience
-                        mGenerator.setRangeStart(lowest - 1);
-                        mGenerator.setDirection(false);
-                        mGenerator.start(mExtraCells);
-
+                        generateCells(lowest - 1, mExtraCells, false);
                         // Flag that we currently have more items than usual, and they must be removed at some point before adding more items.
                         mIsOverDraft = true;
                     }
@@ -754,7 +737,7 @@ public class MainActivity extends AppCompatActivity
                 // Redraw RecyclerView with empty grid.
                 mNumbersGridRecyclerView.invalidate();
                 // Start generating first numbers.
-                mGenerator.start(0, mMinItemCount, true);
+                generateCells(0, mMinItemCount, true);
             }
         });
     }
@@ -762,5 +745,14 @@ public class MainActivity extends AppCompatActivity
     private void reloadGrid(boolean requiresMeasuring) {
         reloadGrid(((GridLayoutManager) mNumbersGridRecyclerView
                 .getLayoutManager()).getSpanCount(), requiresMeasuring);
+    }
+    
+    private void generateCells(long start, int range, boolean direction) {
+        mGenerator.setRangeStart(start);
+        mGenerator.setDirection(direction);
+        mGenerator.start(range);
+
+        // Flag as loading.
+        mIsLoading = true;
     }
 }
