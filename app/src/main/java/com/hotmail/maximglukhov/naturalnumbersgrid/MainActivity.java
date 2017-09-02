@@ -735,6 +735,10 @@ public class MainActivity extends AppCompatActivity
         mNumbersGridRecyclerView.post(new Runnable() {
             @Override
             public void run() {
+                // Remove any pending transactions.
+                new Handler(getMainLooper()).removeCallbacksAndMessages(null);
+                // Remove any callbacks from generator to avoid mixing up results.
+                mNumbersGridRecyclerView.removeCallbacks(mGenerator);
                 // Create new adapter.
                 mNumbersGridRecyclerView.setAdapter(new NumberCellAdapter());
                 // Redraw RecyclerView with empty grid.
