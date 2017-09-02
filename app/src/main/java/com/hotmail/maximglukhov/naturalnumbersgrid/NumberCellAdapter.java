@@ -84,9 +84,11 @@ public class NumberCellAdapter
             if (i == cells.length)
                 break;
 
-            // Reached cells termination (happens when we scroll to 0).
+            // Encountered empty cell - the rest might not be null.
+            // A cell is usually null if generator is trying to generate below 0.
+            // However, cells are flipped when generating backwards., so we must skip null cells until we reach ones with numbers.
             if (cells[i] == null)
-                break;
+                continue;
 
             // Insert cell.
             mNumberCells.add(start++, cells[i]);
