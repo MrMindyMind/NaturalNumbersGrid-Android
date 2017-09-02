@@ -40,6 +40,11 @@ public class MainActivity extends AppCompatActivity
     private static final int DEFAULT_COLUMN_COUNT = 10;
 
     /*
+     * Defines minimum multiplier for item count.
+     */
+    private static final int MIN_ITEM_COUNT_MULTIPLIED = 3;
+
+    /*
      * Defines default buffer size.
      */
     private static final int DEFAULT_BUFFER_SIZE = 100;
@@ -52,6 +57,11 @@ public class MainActivity extends AppCompatActivity
      * Extra cells is calculated as (bufferSize * spanCount).
      */
     private int mExtraCells;
+
+    /*
+     * Initial amount of items to insert in order to estimate amount of cells in screen.
+     */
+    private static final int INITIAL_ITEMS_AMOUNT = 100;
 
     /*
      * Popup box for factors displaying.
@@ -68,6 +78,15 @@ public class MainActivity extends AppCompatActivity
      * Grid number cells generator task (runs on separate thread).
      */
     private NumberCellGeneratorTask mGenerator;
+
+    /*
+     * Indicates that we are currently testing how many items can fit in the screen.
+     */
+    private boolean mIsMeasuring;
+    /*
+     * Holds amount of minimum items.
+     */
+    private int mMinItemCount = INITIAL_ITEMS_AMOUNT;
 
     /*
      * Indicates that there's a pending task to complete (insertion/removal)
@@ -102,14 +121,67 @@ public class MainActivity extends AppCompatActivity
                                final int dy) {
             super.onScrolled(recyclerView, dx, dy);
 
-            Log.d(LOG_TAG, "onScrolled :: isLoading=" + mIsLoading + " dx=" + dx + " dy=" + dy);
+            Log.d(LOG_TAG, "onScrolled :: isLoading=" + mIsLoading + " dx=" + dx + " dy=" + dy + " isMeasuring=" + mIsMeasuring);
+
+            final GridLayoutManager gridLayoutManager = (GridLayoutManager)
+                    mNumbersGridRecyclerView.getLayoutManager();
+
+            if (mIsMeasuring) {
+                /*
+                 * The following code is required to measure amount of visible items in page.
+                 * Calculation is done by the following steps:
+                 * 1.   Calculating average height of every item: total height of all rows
+                 *      divided by number of rows.
+                 * 2.   Estimating amount of visible rows: RecyclerView's height divided by average height.
+                 * 3.   Finally, estimating amount of visible cells: rows times columns.
+                 */
+
+                // Get column count.
+                int spanCount = gridLayoutManager.getSpanCount();
+                // Get currently visible item count.
+                int currentVisibleItems = mNumbersGridRecyclerView
+                        .getChildCount();
+
+                // Calculate height of every row by sampling first item height in every row.
+                int heightSum = 0;
+                for (int i = 0; i < currentVisibleItems; i+= spanCount) {
+                    View childView = mNumbersGridRecyclerView
+                            .getChildAt(i);
+                    heightSum += childView.getHeight();
+                }
+
+                // Calculate average height.
+                double avgHeight = heightSum
+                        / Math.ceil((float)currentVisibleItems / spanCount);
+                // Calculate estimated rows.
+                int estimatedRows = (int) Math.ceil(
+                        (mNumbersGridRecyclerView.getHeight() / avgHeight));
+
+                // Finally, calculate estimated cells.
+                int estimatedCells = estimatedRows * spanCount;
+                int totalCells = estimatedCells * MIN_ITEM_COUNT_MULTIPLIED;
+
+                Log.d(LOG_TAG, "onScrolled :: itemCount=" + currentVisibleItems + " avgHeight=" + avgHeight + " estimatedCells=" + estimatedCells + " totalCells=" + totalCells);
+
+                // Flag as no longer measuring to avoid this process for further scrolling.
+                mIsMeasuring = false;
+
+                // If calculated amount of cells is different than what is currently set, reload grid.
+                if (totalCells != mMinItemCount) {
+                    mMinItemCount = totalCells;
+
+                    // Pass false parameter to avoid measuring.
+                    reloadGrid(spanCount, false);
+
+                    // Exit early to avoid further scrolling processing.
+                    return;
+                }
+            }
 
             // Don't do anything if we are still loading additional items.
             if (mIsLoading)
                 return;
 
-            final GridLayoutManager gridLayoutManager = (GridLayoutManager)
-                    mNumbersGridRecyclerView.getLayoutManager();
             final NumberCellAdapter adapter = (NumberCellAdapter)
                     mNumbersGridRecyclerView.getAdapter();
 
@@ -293,7 +365,9 @@ public class MainActivity extends AppCompatActivity
             @Override
             public boolean onScroll(MotionEvent motionEvent,
                                     MotionEvent motionEvent1,
-                                    float v, float v1) { return false; }
+                                    float dx, float dy) {
+                return true;
+            }
 
             @Override
             public void onLongPress(MotionEvent motionEvent) {
@@ -445,10 +519,13 @@ public class MainActivity extends AppCompatActivity
         /*
          * Initialize number generator.
          */
-        mGenerator = new NumberCellGeneratorTask(0, 300, true, this,
-                new Handler(getMainLooper()));
+        mGenerator = new NumberCellGeneratorTask(0, mMinItemCount,
+                true, this, new Handler(getMainLooper()));
 
         syncPreferences();
+
+        // Flag as currently measuring.
+        mIsMeasuring = true;
 
         mGenerator.start();
     }
@@ -474,6 +551,7 @@ public class MainActivity extends AppCompatActivity
 
         // Post task to ensure RecyclerView is ready.
         mNumbersGridRecyclerView.post(new Runnable() {
+
             @Override
             public void run() {
                 Log.d(LOG_TAG, "onCellsReady :: run :: inserting " + cells.length + " at index=" + indexStart);
@@ -615,18 +693,7 @@ public class MainActivity extends AppCompatActivity
              * cells to load, therefore everything must be reloaded.
              */
 
-            // Reset flags.
-            mIsHighlighted = false;
-            mIsOverDraft = false;
-            mIsLoading = false;
-
-            // Create new adapter.
-            mNumbersGridRecyclerView.setAdapter(
-                    new NumberCellAdapter(spanCount));
-            // Redraw RecyclerView.
-            mNumbersGridRecyclerView.invalidate();
-            // Start generating first numbers.
-            mGenerator.start(0, 300, true);
+            reloadGrid(true);
         }
     }
 
@@ -640,5 +707,33 @@ public class MainActivity extends AppCompatActivity
     private void setBufferSize(int bufferSize) {
         setSpanAndBufferSize(((GridLayoutManager) mNumbersGridRecyclerView
                 .getLayoutManager()).getSpanCount(), bufferSize);
+    }
+
+    private void reloadGrid(final int spanCount,
+                            boolean requiresMeasuring) {
+        // Reset flags.
+        mIsHighlighted = false;
+        mIsOverDraft = false;
+        mIsLoading = false;
+        // Set measuring flag.
+        mIsMeasuring = requiresMeasuring;
+
+        mNumbersGridRecyclerView.post(new Runnable() {
+            @Override
+            public void run() {
+                // Create new adapter.
+                mNumbersGridRecyclerView.setAdapter(new NumberCellAdapter(
+                        spanCount));
+                // Redraw RecyclerView with empty grid.
+                mNumbersGridRecyclerView.invalidate();
+                // Start generating first numbers.
+                mGenerator.start(0, mMinItemCount, true);
+            }
+        });
+    }
+
+    private void reloadGrid(boolean requiresMeasuring) {
+        reloadGrid(((GridLayoutManager) mNumbersGridRecyclerView
+                .getLayoutManager()).getSpanCount(), requiresMeasuring);
     }
 }
