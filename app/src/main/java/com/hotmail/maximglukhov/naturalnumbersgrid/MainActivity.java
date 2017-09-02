@@ -251,11 +251,6 @@ public class MainActivity extends AppCompatActivity
                                 // Flag as no longer loading as our transaction has ended.
                                 mIsLoading = false;
                                 Log.d("MainActivity", "onScrolled :: run :: success.");
-                                // Check if we are at the bottom of the current list and trigger additional loading if we are.
-                                if (lastCompletelyVisibleItem >= (lowerThreshold - mExtraCells)) {
-                                    Log.d("MainActivity", "onScrolled :: run :: running onScrolled once again.");
-                                    onScrolled(recyclerView, dx, dy);
-                                }
                             }
                         });
 
