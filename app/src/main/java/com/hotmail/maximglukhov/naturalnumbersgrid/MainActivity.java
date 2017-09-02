@@ -41,11 +41,6 @@ public class MainActivity extends AppCompatActivity
     private static final int DEFAULT_COLUMN_COUNT = 10;
 
     /*
-     * Defines minimum multiplier for item count.
-     */
-    private static final int MIN_ITEM_COUNT_MULTIPLIED = 3;
-
-    /*
      * Defines default buffer size.
      */
     private static final int DEFAULT_BUFFER_SIZE = 100;
@@ -177,7 +172,7 @@ public class MainActivity extends AppCompatActivity
 
                 // Finally, calculate estimated cells.
                 int estimatedCells = estimatedRows * spanCount;
-                int totalCells = estimatedCells * MIN_ITEM_COUNT_MULTIPLIED;
+                int totalCells = estimatedCells * spanCount;
 
                 Log.d(LOG_TAG, "onScrolled :: itemCount=" + currentVisibleItems + " avgHeight=" + avgHeight + " estimatedCells=" + estimatedCells + " totalCells=" + totalCells);
 
